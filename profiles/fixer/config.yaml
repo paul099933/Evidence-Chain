@@ -1,0 +1,11 @@
+# Evidence-Chain Fixer profile
+# Fix code within scope constraints, git commit, hand off to Plugin.
+
+model:
+  provider: deepseek
+  default: deepseek-v4-flash
+
+toolsets:
+  - terminal
+  - kanban
+  - file
