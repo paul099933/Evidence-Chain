@@ -23,7 +23,7 @@ if [ -z "$BODY" ]; then
     exit 1
 fi
 
-NONCE=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)["task"]["body"])" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get("Nonce",""))" 2>/dev/null)
+NONCE=$(echo "$BODY" | python3 -c 'import sys,json; print(json.load(sys.stdin)["task"]["body"])' 2>/dev/null | python3 -c 'import sys,json; print(json.load(sys.stdin).get("Nonce",""))' 2>/dev/null)
 
 if [ -z "$NONCE" ]; then
     echo "FATAL: No Plugin nonce. Must run via pipeline_start." >&2
