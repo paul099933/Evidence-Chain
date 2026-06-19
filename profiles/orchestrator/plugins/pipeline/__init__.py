@@ -32,6 +32,7 @@ import secrets
 import subprocess
 import time
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -216,7 +217,7 @@ def _poll_until_done(task_id: str, timeout: int = 600) -> dict:
     from tools.registry import registry
 
     evidence_root = os.path.join(
-        os.environ.get("REAL_HOME", "/home/agent"),
+        REAL_HOME,
         ".hermes", "evidence-archive", task_id,
     )
     evidence_json = os.path.join(evidence_root, "evidence.json")
@@ -328,6 +329,69 @@ def _cleanup(ws_root: str) -> None:
 # ---------------------------------------------------------------------------
 # Handler
 # ---------------------------------------------------------------------------
+
+def _create_verifier(
+    parents: list[str],
+    branch: str,
+    project_dir: str,
+    retry_count: int,
+    evidence: dict,
+    scope: dict,
+    failed_gates: list[str],
+) -> str:
+    """Create a verifier kanban task and return its task_id."""
+    from tools.kanban_tools import _handle_create
+
+    result = _handle_create({
+        "title": f"Audit fix: retry {retry_count}",
+        "assignee": "verifier",
+        "parents": parents,
+        "body": json.dumps({
+            "Branch": branch,
+            "Project": project_dir,
+            "Retry": retry_count,
+            "Evidence": evidence,
+            "Scope": scope,
+            "PrevFailedGates": failed_gates,
+        }, ensure_ascii=False),
+    })
+    data = json.loads(result)
+    if not data.get("ok"):
+        raise RuntimeError(f"kanban_create (verifier) failed: {data}")
+    task_id: str = data["task_id"]
+    logger.info("Created verifier task %s (retry %d)", task_id, retry_count)
+    return task_id
+
+
+def _poll_verdict(task_id: str, timeout: int = 300) -> dict:
+    """Poll verifier task and return its audit verdict metadata.
+
+    Unlike _poll_until_done which reads evidence.json,
+    this reads the kanban metadata verdict field.
+    """
+    from tools.registry import registry
+
+    start = time.time()
+    while time.time() - start < timeout:
+        raw = registry.dispatch("kanban_show", {"task_id": task_id})
+        data = json.loads(raw)
+        status = data.get("task", {}).get("status")
+        runs = data.get("runs", []) or []
+
+        for r in runs:
+            meta = r.get("metadata") or {}
+            if meta.get("verdict") in ("audit_pass", "audit_block"):
+                return meta
+
+        if status == "blocked":
+            return {"verdict": "audit_block", "block_reasons": ["kanban_blocked"]}
+
+        if status not in ("done", "blocked", "archived"):
+            time.sleep(10)
+            continue
+
+        raise TimeoutError(f"Verifier task {task_id} did not complete within {timeout}s")
+
 
 def handle_pipeline_start(args: dict, **kw) -> str:
     """Execute the full test-verify-fix pipeline loop."""
@@ -495,6 +559,31 @@ def handle_pipeline_start(args: dict, **kw) -> str:
         # --- Poll Fixer ---
         _poll_until_done(fixer_id)
         # Fixer commits; next Runner on same branch picks up the fix
+
+        # --- Verifier (new) ---
+        verifier_id = _create_verifier(
+            parents=[fixer_id],
+            branch=branch,
+            project_dir=project_dir,
+            retry_count=retry_count,
+            evidence=evidence,
+            scope=fixer_scope,
+            failed_gates=failed_gates,
+        )
+        logger.info(
+            "Verifier task %s dispatched (retry %d/%d)",
+            verifier_id, retry_count, max_retries,
+        )
+        audit = _poll_verdict(verifier_id)
+
+        if audit.get("verdict") != "audit_pass":
+            _cleanup(ws_root)
+            return json.dumps({
+                "verdict": "blocked",
+                "reason": audit.get("block_reasons"),
+                "branch": branch,
+                "audit": audit,
+            }, ensure_ascii=False)
 
         # Loop back to create new Runner
 
