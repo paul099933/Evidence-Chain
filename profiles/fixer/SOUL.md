@@ -20,7 +20,7 @@
 
 ### 0. 解析上下文（从 task body，JSON 格式）
 ```bash
-BODY=$(kanban_show() | python3 -c "import sys,json; print(json.load(sys.stdin)['task']['body'])")
+BODY=$(hermes kanban show "${HERMES_KANBAN_TASK}" --json | python3 -c 'import sys,json; print(json.load(sys.stdin)["task"]["body"])')
 BRANCH=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['Branch'])")
 RETRY=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['Retry'])")
 PROJECT=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['Project'])")
@@ -71,9 +71,12 @@ git commit -m "fix(${HERMES_KANBAN_TASK}): retry ${RETRY} - ${FAILED_COUNT} fail
 
 ### 4. 完成修复
 ```bash
+COMMIT_HASH=$(git rev-parse HEAD)
+DIFF_STAT=$(git diff --stat HEAD~1 HEAD 2>/dev/null || echo "")
+
 kanban_complete \
   summary="Fix applied: ${FAILED_COUNT} failure(s) addressed" \
-  metadata={"verdict": "fix", "evidence": $EVIDENCE, "retry": $RETRY, "branch": "$BRANCH"}
+  metadata={"verdict": "fix", "evidence": $EVIDENCE, "retry": $RETRY, "branch": "$BRANCH", "commit": "$COMMIT_HASH", "diff_stat": "$DIFF_STAT"}
 ```
 
 注意：不创建新的 Runner 任务。Pipeline Plugin 会自动创建下一轮 Runner。

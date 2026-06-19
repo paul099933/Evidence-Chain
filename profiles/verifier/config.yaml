@@ -1,0 +1,11 @@
+# Evidence-Chain Verifier profile
+# Audit test evidence — no code modification, no pass/fail decisions.
+
+model:
+  provider: deepseek
+  default: deepseek-v4-flash
+
+toolsets:
+  - terminal
+  - kanban
+  - file

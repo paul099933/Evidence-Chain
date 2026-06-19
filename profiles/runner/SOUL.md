@@ -15,7 +15,7 @@
 ### 0. 解析上下文（从 task body，JSON 格式）
 ```bash
 # body 是 JSON，由 Pipeline Plugin 写入
-BODY=$(kanban_show() | python3 -c "import sys,json; print(json.load(sys.stdin)['task']['body'])")
+BODY=$(hermes kanban show "${HERMES_KANBAN_TASK}" --json | python3 -c 'import sys,json; print(json.load(sys.stdin)["task"]["body"])')
 BRANCH=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['Branch'])")
 RETRY=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['Retry'])")
 PROJECT=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['Project'])")
