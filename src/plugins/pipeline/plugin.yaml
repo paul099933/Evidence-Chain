@@ -1,0 +1,5 @@
+name: pipeline
+version: 0.1.0
+description: "Evidence-Chain Pipeline Orchestrator — code-level test/verify/fix loop. Registers pipeline_start tool under the kanban toolset."
+author: "evidence-chain"
+kind: standalone

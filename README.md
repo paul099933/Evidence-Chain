@@ -6,10 +6,31 @@
 
 ## 当前版本
 
-v0.1 — 基线归档（PROMPT 驱动版本）
+v1.2 — Plugin 代码级 Pipeline（部署状态）
+
+## 目录结构
+
+```
+evidence-chain/
+  src/                     ← 唯一构建源
+    profiles/              ← Kanban 角色 SOUL.md + config.yaml
+    evidence-tools/        ← 测试入口脚本（run-test.sh 等）
+    docs/                  ← 架构文档
+  archive/                 ← 历史版本归档
+    v0/
+    v0/tools/              ← SFP 测试辅助脚本
+  deploy.sh                ← 单向同步脚本
+  README.md
+```
+
+## 快速开始
+
+```
+./deploy.sh
+```
 
 ## 文档
 
-- [产品愿景](docs/product-vision.md)
-- [架构决策](docs/architecture.md)
-- [版本记录](CHANGELOG.md)
+- [产品愿景](src/docs/product-vision.md)
+- [架构决策](src/docs/architecture.md)
+- [版本记录](src/CHANGELOG.md)
