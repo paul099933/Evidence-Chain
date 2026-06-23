@@ -1,0 +1,9 @@
+model:
+  provider: deepseek
+  default: deepseek-v4-flash
+toolsets:
+- terminal
+- kanban
+onboarding:
+  seen:
+    tool_progress_prompt: true

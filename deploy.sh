@@ -38,6 +38,9 @@ REQUIRED=(
     "${SRC}/profiles/runner/SOUL.md"
     "${SRC}/profiles/fixer/SOUL.md"
     "${SRC}/profiles/verifier/SOUL.md"
+    "${SRC}/profiles/orchestrator/config.yaml"
+    "${SRC}/profiles/runner/config.yaml"
+    "${SRC}/profiles/fixer/config.yaml"
     "${SRC}/profiles/verifier/config.yaml"
     "${SRC}/evidence-tools/run-test.sh"
 )
@@ -55,8 +58,6 @@ for role in orchestrator runner fixer verifier; do
     TASKS+=("profiles/${role}/SOUL.md:${HOME}/.hermes/profiles/${role}/SOUL.md")
 done
 
-# Verifier config.yaml
-TASKS+=("profiles/verifier/config.yaml:${HOME}/.hermes/profiles/verifier/config.yaml")
 
 # Evidence tools
 for tool in run-test.sh generate.sh feedback.sh test-sfp-desktop.sh; do
