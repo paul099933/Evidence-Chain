@@ -109,8 +109,10 @@ for task in "${TASKS[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# 清理尸体：确保 no 字节文件不在错误位置
+# 清理尸体
 # ---------------------------------------------------------------------------
+
+# 1. Ghost deepseek/home 目录
 GHOST="${HOME}/.hermes/profiles/deepseek/home"
 if [ -d "$GHOST" ]; then
     if $DRY_RUN; then
@@ -118,6 +120,17 @@ if [ -d "$GHOST" ]; then
     else
         rm -rf "$GHOST"
         log "已删除 ghost 目录: ${GHOST}"
+    fi
+fi
+
+# 2. Dead orchestrator plugin copy（权威在 deepseek profile）
+DEAD_PLUGIN="${HOME}/.hermes/profiles/orchestrator/plugins"
+if [ -d "$DEAD_PLUGIN" ]; then
+    if $DRY_RUN; then
+        echo "  [DEAD COPY DETECTED] rm -rf ${DEAD_PLUGIN}"
+    else
+        rm -rf "$DEAD_PLUGIN"
+        log "已删除 orchestrator plugin 死副本: ${DEAD_PLUGIN}"
     fi
 fi
 
