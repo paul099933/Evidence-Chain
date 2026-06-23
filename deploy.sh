@@ -53,9 +53,10 @@ done
 # ---------------------------------------------------------------------------
 TASKS=()
 
-# Profile SOUL.md
+# Profile SOUL.md + config.yaml
 for role in orchestrator runner fixer verifier; do
     TASKS+=("profiles/${role}/SOUL.md:${HOME}/.hermes/profiles/${role}/SOUL.md")
+    TASKS+=("profiles/${role}/config.yaml:${HOME}/.hermes/profiles/${role}/config.yaml")
 done
 
 
