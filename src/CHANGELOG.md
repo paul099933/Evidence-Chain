@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v1.2 — 仓库重組 + deploy.sh（2026-06-23）
+## v1.2 — 仓库重组 + deploy.sh（2026-06-23）
 **项目**：Evidence-Chain 仓库结构标准化
 **增加**：
 - `src/` 统一构建源（profiles/、evidence-tools/、plugins/、docs/）
@@ -10,7 +10,7 @@
 **修改原因**：仓库根目录混乱（v0 与 v1 混排）、profile SOUL.md 从未正式部署、无自动化 deploy。Plugin 从 orchestrator/ 死副本迁移到 deepseek profile。
 **删除**：orchestrator/plugins/ 死副本、ghost home/ 目录
 
-## v1.1 — 修复循环（2026-06-19）
+## v1.1 — 修复循环 + 对抗性审查（2026-06-19）
 **项目**：Evidence-Chain 自动修复循环
 **增加**：Plugin 内 retry 计数（Python 变量）、状态机、自动创建 Fixer + 新 Runner
 **增加**：Verifier 审计门控（adversarial audit，默认不 pass）
