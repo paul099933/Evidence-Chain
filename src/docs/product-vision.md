@@ -60,7 +60,7 @@ Fixer	代码修复	在范围和方向约束内修改代码、commit、创建新 
 文件	作用
 report.xml	JUnit XML，机器可读测试结果
 output.log	原始 stdout/stderr
-evidence.json	结构化证据：hash、passed、failed、timestamp
+evidence.json	结构化证据：sha256、passed、failed、errors、skipped、timestamp、tests[]
 ~/.hermes/evidence-archive/${TASK_ID}/	持久化归档，防销毁
 证据权威来源：
 - 短期：Kanban DB 的 task_runs.metadata

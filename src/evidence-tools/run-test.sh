@@ -96,13 +96,18 @@ for idx, script in enumerate(scripts):
     part_junit = '${JUNIT_PATH}.part.' + str(idx)
     print(f'[run-test] Running [{idx}] script={script}', flush=True)
 
-    # 解析脚本完整路径 — 只从项目目录找
+    # 解析脚本完整路径 — 优先从项目 .evidence/ 找，找不到再从全局 evidence-tools 找
     full_script = None
-    candidate = os.path.join('${PROJECT_DIR}', '.evidence', script)
-    if os.access(candidate, os.X_OK):
-        full_script = candidate
-    else:
-        print(f'[run-test] ERROR: script not in project .evidence/: {script}')
+    candidates = [
+        os.path.join('${PROJECT_DIR}', '.evidence', script),
+        os.path.join('${EVIDENCE_TOOLS}', script),
+    ]
+    for candidate in candidates:
+        if os.access(candidate, os.X_OK):
+            full_script = candidate
+            break
+    if not full_script:
+        print(f'[run-test] ERROR: script not found in .evidence/ or evidence-tools: {script}')
         sys.exit(1)
 
     # 执行脚本
@@ -146,62 +151,11 @@ else
     bash "${TEST_SELECTOR}" "${JUNIT_PATH}"
 fi
 
-"${EVIDENCE_TOOLS}/generate.sh" "${TASK_ID}" "${JUNIT_PATH}"
-
-# 如果 evidence.json 仍未生成（自定义测试脚本不写该文件），从 JUnit XML 自动兜底
-if [ ! -f "${EVIDENCE_DIR}/evidence.json" ] && [ -f "${JUNIT_PATH}" ]; then
-    echo "[run-test] auto-generating evidence.json from ${JUNIT_PATH}"
-    python3 -c "
-import xml.etree.ElementTree as ET, json, hashlib, os
-
-path = '${JUNIT_PATH}'
-ev_dir = '${EVIDENCE_DIR}'
-
-with open(path, 'rb') as f:
-    raw = f.read()
-sha = hashlib.sha256(raw).hexdigest()
-root = ET.fromstring(raw)
-
-# 提取 per-test 状态
-tests = []
-for suite in root.findall('.//testsuite'):
-    for tc in suite.findall('testcase'):
-        tid = tc.get('name', 'unknown')
-        fail = tc.find('failure')
-        err = tc.find('error')
-        status = 'fail' if fail is not None else ('error' if err is not None else 'pass')
-        msg = fail.get('message') if fail is not None else (err.get('message') if err is not None else '')
-        tests.append({'id': tid, 'name': tid, 'status': status, 'message': msg})
-
-# 兼容顶层 testsuite
-if root.tag == 'testsuite':
-    for tc in root.findall('testcase'):
-        tid = tc.get('name', 'unknown')
-        fail = tc.find('failure')
-        err = tc.find('error')
-        status = 'fail' if fail is not None else ('error' if err is not None else 'pass')
-        msg = fail.get('message') if fail is not None else (err.get('message') if err is not None else '')
-        tests.append({'id': tid, 'name': tid, 'status': status, 'message': msg})
-
-# 统计
-passed = sum(1 for t in tests if t['status'] == 'pass')
-failed = sum(1 for t in tests if t['status'] == 'fail')
-errors = sum(1 for t in tests if t['status'] == 'error')
-
-ev = {
-    'passed': passed,
-    'failed': failed,
-    'errors': errors,
-    'sha256': sha,
-    'junit_path': path,
-    'task_id': '${TASK_ID}',
-    'tests': tests,
-    'nonce': os.environ.get('NONCE', ''),
-}
-with open(os.path.join(ev_dir, 'evidence.json'), 'w') as f:
-    json.dump(ev, f, indent=2)
-print(f'[run-test] evidence.json auto-generated: {passed} passed, {failed} failed, {len(tests)} tests with per-test status')
-" 2>&1
+if [ ! -f "${JUNIT_PATH}" ]; then
+    echo "FATAL: No JUnit XML produced at ${JUNIT_PATH}" >&2
+    exit 1
 fi
+
+"${EVIDENCE_TOOLS}/generate.sh" "${TASK_ID}" "${JUNIT_PATH}" "${EVIDENCE_DIR}"
 
 echo "[INFO] 完成"

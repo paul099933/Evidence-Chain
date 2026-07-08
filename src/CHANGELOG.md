@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## v1.3 — pipeline_core 模块化 + 声明式测试（2026-07-08）
+**项目**：Evidence-Chain Plugin 架构重构
+**增加**：
+- `pipeline_core/` 代码库（acceptance/diff_guard/evidence/git_utils/schema）—— 从插件提取，代码级执行
+- `diff_guard.py` Fixer 修改范围硬检查（allow_edit/deny_edit/max_diff_lines），越界自动 drop_last_commit
+- `evidence.py` + `schema.py` —— 证据 JSON 规范解析、加载、校验（nonce 绑定 + schema 验证）
+- `test-runner.sh` —— 通用声明式测试引擎，从 YAML 定义执行，输出 JUnit XML
+- `.gitignore` —— 排除 __pycache__、.pytest_cache、IDE 文件
+**修改**：
+- `plugins/pipeline/__init__.py` 从 657 行精简到 586 行，逻辑委托给 pipeline_core/
+- `run-test.sh` 删除内联 Python 证据兜底，委托 generate.sh（带 evidence_dir 参数）
+- `generate.sh` 增加 per-test 追踪、nonce、skipped 字段、输出到 evidence_dir
+- `feedback.sh` 字段名 `hash` → `sha256`
+- All 4 SOUL.md 从"写 shell 脚本"改为"生成 test-definitions.yaml"声明式定义
+- `deploy.sh` 增加 pipeline_core/ 部署 + test-runner.sh 部署
+- `pipeline_start` 接口去掉 `test_scripts` 参数
+**修改原因**：单体插件无法独立测试、无法代码级约束、SOUL.md 可能被 LLM 绕过。pipeline_core 为所有角色共享的可测试 Python 库。diff_guard 提供代码级防线。
+
 ## v1.2 — 仓库重组 + deploy.sh（2026-06-23）
 **项目**：Evidence-Chain 仓库结构标准化
 **增加**：

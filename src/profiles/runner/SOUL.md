@@ -55,9 +55,12 @@ REAL_HOME="${REAL_HOME:-/home/agent}"
 EVIDENCE_DIR="${REAL_HOME}/.hermes/evidence-archive/${HERMES_KANBAN_TASK}"
 EVIDENCE=$(cat "${EVIDENCE_DIR}/evidence.json" 2>/dev/null || echo '{"passed":0,"failed":999,"error":"evidence.json missing"}')
 
+EVIDENCE_JSON=$(cat "${EVIDENCE_DIR}/evidence.json" 2>/dev/null || echo '{"passed":0,"failed":999}')
+METADATA=$(printf '{"evidence": %s, "branch": "%s", "retry": %d}' "$EVIDENCE_JSON" "$BRANCH" "$RETRY")
+
 kanban_complete \
   summary="passed:$(echo "$EVIDENCE" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("passed",0))') failed:$(echo "$EVIDENCE" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("failed",0))')" \
-  metadata={"evidence": $(cat "${EVIDENCE_DIR}/evidence.json" 2>/dev/null || echo '{"passed":0,"failed":999}'), "branch": "$BRANCH", "retry": $RETRY}
+  metadata="$METADATA"
 ```
 
 ## 工具白名单

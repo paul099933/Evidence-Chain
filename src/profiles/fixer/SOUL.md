@@ -74,9 +74,12 @@ git commit -m "fix(${HERMES_KANBAN_TASK}): retry ${RETRY} - ${FAILED_COUNT} fail
 COMMIT_HASH=$(git rev-parse HEAD)
 DIFF_STAT=$(git diff --stat HEAD~1 HEAD 2>/dev/null || echo "")
 
+METADATA=$(printf '{"verdict": "fix", "evidence": %s, "retry": %d, "branch": "%s", "commit": "%s", "diff_stat": "%s"}' \
+  "$EVIDENCE" "$RETRY" "$BRANCH" "$COMMIT_HASH" "$DIFF_STAT")
+
 kanban_complete \
   summary="Fix applied: ${FAILED_COUNT} failure(s) addressed" \
-  metadata={"verdict": "fix", "evidence": $EVIDENCE, "retry": $RETRY, "branch": "$BRANCH", "commit": "$COMMIT_HASH", "diff_stat": "$DIFF_STAT"}
+  metadata="$METADATA"
 ```
 
 注意：不创建新的 Runner 任务。Pipeline Plugin 会自动创建下一轮 Runner。

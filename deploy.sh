@@ -61,11 +61,17 @@ done
 
 
 # Evidence tools
-for tool in run-test.sh generate.sh feedback.sh test-sfp-desktop.sh; do
+for tool in run-test.sh generate.sh feedback.sh test-sfp-desktop.sh test-runner.sh; do
     src_path="${SRC}/evidence-tools/${tool}"
     if [ -f "$src_path" ]; then
         TASKS+=("evidence-tools/${tool}:${HOME}/.hermes/evidence-tools/${tool}")
     fi
+done
+
+# Pipeline core library (imported by the plugin)
+for f in $(find "${SRC}/pipeline_core" -type f -name '*.py' | sort); do
+    rel="${f#${SRC}/}"
+    TASKS+=("${rel}:${HOME}/.hermes/${rel}")
 done
 
 # Pipeline plugin — 部署到 deepseek profile（config 在此启用 pipeline）

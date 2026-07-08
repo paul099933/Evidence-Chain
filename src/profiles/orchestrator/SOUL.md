@@ -97,43 +97,87 @@ cat "${PROJECT_DIR}/.evidence/test-manifest.yaml" | grep -E "name:|script:" | he
   └─ head -30 确认入口参数和输出信号
 ```
 
-### 2b：匹配 test_id 覆盖
+### 2b：从自然语言提取验收标准
 
-```bash
-# 从测试脚本 grep 已有 run_test ID
-grep -n 'run_test "' ${PROJECT_DIR}/.evidence/*.sh 2>/dev/null | grep -oP '"\K[^"]+' | sort -u
+把用户输入拆成独立、可验证的验收标准条目：
+
+```
+验收标准：
+  1. {场景描述} → {期望输出}     ← id: AC1
+  2. {场景描述} → {期望输出}     ← id: AC2
+  ...
 ```
 
-两种结果：
-- **全部匹配** → 跳到 2d
-- **有未匹配** → 进入 2c
+原则：
+- 每个 AC 都对应一个可独立验证的行为
+- 不依赖现有测试脚本
+- 不假设 `test_id` 存在
 
-### 2c：生成新测试脚本（Test-Author 子任务）
+### 2c：生成声明式测试定义（Test-Author 子任务）
 
-当现有测试脚本没有覆盖用户需求的场景时，调用子 agent 生成：
+调用子 agent，把验收标准转成 `.evidence/test-definitions.yaml`：
 
 ```python
 result = delegate_task(
-    goal="Create test script for: {test_spec}",
-    context="Project: {project_dir}\n"
-            "Existing scripts: {.evidence/*.sh 列表}\n"
-            "Manifest: .evidence/test-manifest.yaml format\n"
-            "Constraints: {scope}\n"
-            "Each test case must have unique id, run_test() call, JUnit XML output",
+    goal="Generate .evidence/test-definitions.yaml from acceptance criteria",
+    context="""You are Test-Author. Your only job is to produce a declarative test definition file.
+
+Project: {project_dir}
+Project name: {project_name}
+Acceptance Criteria:
+{ac_yaml}
+
+Task:
+1. Write or update `{project_dir}/.evidence/test-definitions.yaml`.
+2. Write or update `{project_dir}/.evidence/test-manifest.yaml` to register `test-runner.sh`.
+3. Do NOT modify any source code files.
+4. Do NOT git add, git commit, or run tests.
+
+Required YAML schema for test-definitions.yaml:
+```yaml
+project: {project_name}
+
+tests:
+  - id: AC1
+    description: "..."
+    setup: |
+      # optional bash commands; export variables here if command/verify need them
+    command: |
+      # bash command whose stdout and exit_code are checked
+    expect:
+      stdout_prefix: "..."   # optional
+      stdout_contains: "..." # optional
+      exit_code: 0           # optional, defaults to 0 if stdout assertions present
+    verify: |
+      # optional bash command; must exit 0 to pass
+  - id: AC2
+    ...
+```
+
+Rules:
+- Each AC must map to one or more tests with matching `id`.
+- `setup`, `command`, `verify` share the same shell session, so variables exported in `setup` are available later.
+- Commands should be project-agnostic and use `${PROJECT_DIR}`, `${TEMP_DIR}`, `${TEST_FILE}` where appropriate.
+- Prefer `stdout_contains` over `stdout_prefix` when command output includes setup noise.
+- Keep tests idempotent and side-effect-free (only write inside `${TEMP_DIR}` or the hot zone).
+- If a test requires tools not available in the environment, skip it by adding `skip: true` and a `reason` field.
+""",
     toolsets=["terminal", "file"],
 )
 ```
 
 子 agent 职责：
-1. 在 `.evidence/` 下生成 `test-{feature}.sh`
-2. 更新 `.evidence/test-manifest.yaml` 注册新脚本
-3. 返回新脚本路径 + test_id 列表给主 agent
+1. 在 `.evidence/` 下生成/更新 `test-definitions.yaml`
+2. 在 `.evidence/test-manifest.yaml` 中注册 `script: test-runner.sh`
+3. 返回文件路径 + tests[].id 列表给主 agent
 
-**子 agent 不 git add、不 git commit。** 文件写入后不产生任何 git 历史。
+**子 agent 不 git add、不 git commit、不跑测试。** 文件写入后不产生任何 git 历史。
 
 主 agent 验证：
 ```bash
-ls -la ${PROJECT_DIR}/.evidence/test-*.sh
+ls -la ${PROJECT_DIR}/.evidence/test-definitions.yaml
+ls -la ${PROJECT_DIR}/.evidence/test-manifest.yaml
+python3 -c "import yaml; yaml.safe_load(open('${PROJECT_DIR}/.evidence/test-definitions.yaml'))" && echo "YAML OK"
 ```
 
 ### 2d：产出验收标准草案
@@ -144,13 +188,12 @@ ls -la ${PROJECT_DIR}/.evidence/test-*.sh
 相关模块：{模块路径列表}
 
 验收标准：
-  1. {场景描述} → {期望输出}     ← test_id: {id}
-  2. {场景描述} → {期望输出}     ← test_id: {id}
+  1. {场景描述} → {期望输出}     ← id: AC1
+  2. {场景描述} → {期望输出}     ← id: AC2
   ...
 
-测试脚本：
-  - {已有脚本}
-  - {新增脚本}（新增）           ← 有 2c 执行时显示
+测试定义：
+  .evidence/test-definitions.yaml（已生成/更新）
 
 修改范围：{根据用户意图推断的模块路径}
 最大重试：3
@@ -163,28 +206,26 @@ ls -la ${PROJECT_DIR}/.evidence/test-*.sh
 ```
 === 验收标准草案 ===
 
-验收标准 1：{描述}        ← test_id: {id}
-验收标准 2：{描述}        ← test_id: {id}
+验收标准 1：{描述}        ← id: AC1
+验收标准 2：{描述}        ← id: AC2
 ...
 
-=== 新测试脚本 ===
-.evidence/test-{feature}.sh（新增，N 行）
-[Diff 预览或完整脚本]
+=== 测试定义 ===
+.evidence/test-definitions.yaml（已生成/更新）
 
 === 测试清单 ===
-- {已有脚本}
-- {新增脚本}（新增）
+- test-runner.sh（通用声明式引擎）
 
 === 修改范围 ===
 {scope 推断}
 
 输入：
-  "确认" → git add .evidence/test-*.sh .evidence/test-manifest.yaml && git commit -m "test: add {feature} script"，然后进入 Phase 4
-  "修改脚本" → 展示完整脚本内容，修改后重新确认
+  "确认" → git add .evidence/test-definitions.yaml .evidence/test-manifest.yaml && git commit -m "test: add declarative tests"，然后进入 Phase 4
+  "修改 AC" → 展示并编辑验收标准，重新生成 test-definitions.yaml
   "删第X条" → 删除后再次展示确认
   "加一条：..." → 追加后再次展示确认
   "取消" → git checkout -- .evidence/（无 commit，只丢弃未提交文件）
-  "重生成" → 重新调子 agent 生成
+  "重生成" → 重新调子 agent 生成 test-definitions.yaml
 ```
 
 **不确认不进 Phase 4。** 用户说"确认"才算。
@@ -200,10 +241,9 @@ ls -la ${PROJECT_DIR}/.evidence/test-*.sh
 ```python
 pipeline_start(
     project_dir=PROJECT_DIR,
-    test_scripts=["..."],
     test_spec="用户原始需求",
     acceptance_criteria=[
-        {"id": "AC1", "description": "场景描述", "check": "test_pass", "test_id": "真实ID"},
+        {"id": "AC1", "description": "场景描述", "check": "test_pass"},
     ],
     scope={"allow_edit": ["..."]},
     max_retries=3,

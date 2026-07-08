@@ -12,7 +12,7 @@ if [ ! -f "${EVIDENCE_FILE}" ]; then
     exit 1
 fi
 
-HASH=$(jq -r '.hash' "${EVIDENCE_FILE}")
+HASH=$(jq -r '.sha256' "${EVIDENCE_FILE}")
 FAILED=$(jq -r '.failed' "${EVIDENCE_FILE}")
 PASSED=$(jq -r '.passed' "${EVIDENCE_FILE}")
 JUNIT_PATH=$(jq -r '.junit_path' "${EVIDENCE_FILE}")

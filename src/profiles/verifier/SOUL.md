@@ -134,9 +134,10 @@ PYEOF
 if [ "${BLOCKED}" = "true" ]; then
     kanban_block reason="Verifier: ${BLOCK_REASONS}"
 else
+    METADATA=$(printf '{"verdict": "audit_pass", "audit_file": "%s"}' "${AUDIT_DIR}/audit-retry-${RETRY}.json")
     kanban_complete \
       summary="Audit pass: retry ${RETRY}" \
-      metadata={"verdict": "audit_pass", "audit_file": "${AUDIT_DIR}/audit-retry-${RETRY}.json"}
+      metadata="$METADATA"
 fi
 ```
 
