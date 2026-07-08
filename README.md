@@ -53,11 +53,9 @@ evidence-chain/
 ├── tests/                      # pipeline_core 单元测试
 ├── archive/v0/                 # v0.1 基线归档
 └── deploy.sh                   # 一键部署脚本
-plain
-
----
 
 ## 快速开始
+
 
 ```bash
 # 1. 克隆
